@@ -1,24 +1,76 @@
 # 🛡️ PhishShield - Plataforma Integral de Detección Forense de Phishing
 
-PhishShield es un sistema avanzado de ciberseguridad defensiva y análisis forense automatizado de URLs y dominios sospechosos. Integra una arquitectura fullstack en un único repositorio con un frontend moderno en **Angular 22** y un motor de inspección multicapa de 19 factores en **Node.js (Express 5)**.
+PhishShield es un sistema avanzado de ciberseguridad defensiva y análisis forense automatizado de URLs y dominios sospechosos. Integra una arquitectura fullstack desacoplada en un único repositorio con un frontend moderno en **Angular 22**, un backend analítico multicapa en **Node.js (Express 5)** y un microservicio de **Machine Learning en Python (Scikit-Learn)**.
 
 ---
 
 ## 🚀 Arquitectura del Sistema
 
 ```text
-[ Cliente Web / Angular 22 ]
-         │
-         ▼  (HTTPS / REST)
-[ API Gateway / Express 5 con Helmet & Rate Limiting ]
-         │
-         ├── 1. Validador Antifraude y SSRF (OWASP)
-         ├── 2. Motor Heurístico y Typosquatting (Distancia Levenshtein / Caracteres Homoglifos)
-         ├── 3. Inspección Criptográfica SSL/TLS (X.509, Emisor, Caducidad, Wildcards)
-         ├── 4. Motor de Renderizado Headless DOM (Puppeteer / Formularios / Iframes)
-         ├── 5. Conectores de Inteligencia de Amenazas (VirusTotal, Google Safe Browsing, PhishTank)
-         ├── 6. Asistente Educativo y Generativo de Ciberseguridad (Gemini AI)
-         └── 7. Módulo de Autenticación Segura (Scrypt + CSPRNG + Tokens con TTL)
+               ┌─────────────────────────────────────────┐
+               │       Cliente Web (Angular 22)          │
+               │   Clean Architecture / Signals / Apple  │
+               └────────────────────┬────────────────────┘
+                                    │ (HTTPS / REST)
+                                    ▼
+               ┌─────────────────────────────────────────┐
+               │   API Gateway & Backend (Express 5)     │
+               │        (server/index.js :3000)          │
+               └────┬───────────────────────────────┬────┘
+                    │                               │
+        ┌───────────┴───────────┐       ┌───────────┴───────────┐
+        ▼                       ▼       ▼                       ▼
+┌──────────────┐        ┌──────────────┐┌──────────────┐┌──────────────┐
+│  Validación  │        │ Motores      ││ Persistencia ││ Microservicio│
+│  SSRF / WAF  │        │ Forenses     ││ server/data/ ││ ML en Python │
+│ (Anti-fraude)│        │• Typosquatting││• blacklist   ││   (:8000)    │
+└──────────────┘        │• Cripto SSL  ││• reports     ││• Scikit-Learn│
+                        │• DOM Puppeteer││• history     ││• Joblib Model│
+                        │  (Espera 3s) ││• cache       │└──────────────┘
+                        │• Threat Intel││• auth        │
+                        │  (VirusTotal,│└──────────────┘
+                        │   SafeBrowser│
+                        │   PhishTank, │
+                        │   Gemini AI) │
+                        └──────────────┘
+```
+
+---
+
+## 📁 Estructura del Proyecto
+
+```text
+PhishShield-Angular/
+├── server/                          # Backend Express & Servicios
+│   ├── analyzers/                   # Motores de análisis (DOM, SSL, Typosquatting, URL, Riesgo)
+│   ├── data/                        # Persistencia unificada y volúmenes Docker
+│   │   ├── blacklist.json           # Lista de dominios sospechosos conocidos (versionado)
+│   │   ├── reports.json             # Reportes comunitarios iniciales (versionado)
+│   │   ├── history.json             # Historial dinámico de análisis (ignorado en Git)
+│   │   ├── cache.json               # Caché TTL en caliente (ignorado en Git)
+│   │   └── auth.json                # Credenciales cifradas Scrypt (ignorado en Git)
+│   ├── ml_service/                  # Microservicio de Machine Learning en Python
+│   │   ├── main.py                  # API FastAPI/Uvicorn del modelo
+│   │   ├── model.joblib             # Modelo entrenado para clasificación de phishing
+│   │   └── requirements.txt         # Dependencias Python
+│   ├── repositories/                # Acceso a datos (HistoryRepository, ReportRepository)
+│   ├── security/                    # Validación anti-SSRF y AuthService (Scrypt + CSPRNG)
+│   ├── services/                    # Conectores VirusTotal, SafeBrowsing, Gemini AI, Caché
+│   ├── tests/                       # Suite de pruebas unitarias y de integración (Vitest)
+│   ├── app.js                       # Clase principal PhishShieldServer con DI
+│   └── index.js                     # Punto de entrada y Graceful Shutdown
+│
+├── src/                             # Frontend Angular 22 (Clean Architecture en Español)
+│   └── app/
+│       ├── nucleo/                  # Constantes globales y configuraciones de entorno
+│       ├── datos/                   # DTOs, mapeadores puros, modelos y repositorios HTTP
+│       ├── logica/                  # Servicios de dominio, Signals reactivos, guardias y validadores
+│       └── presentacion/            # Páginas lazy, componentes standalone, directivas y tokens Apple
+│
+├── Dockerfile                       # Multi-stage build optimizado (Node 20 + Chromium)
+├── docker-compose.yml               # Orquestación de contenedores (PhishShield + ML Service)
+├── ARQUITECTURA.md                  # Documentación técnica formal de capas y diseño
+└── README.md                        # Guía de usuario y despliegue
 ```
 
 ---
@@ -27,17 +79,18 @@ PhishShield es un sistema avanzado de ciberseguridad defensiva y análisis foren
 
 - **Node.js**: `v20.x` o superior
 - **NPM**: `v10.x` o superior
-- **Chromium / Chrome**: Necesario para captura visual y auditoría profunda de DOM (incluido automáticamente en Docker).
+- **Python**: `3.10+` *(Opcional: solo si se desea ejecutar el microservicio ML localmente sin Docker)*
+- **Chromium / Chrome**: Necesario para captura visual de pantalla y auditoría profunda de DOM (instalado automáticamente en la imagen Docker).
 
 ---
 
 ## 🛠️ Instalación y Configuración
 
-### 1. Clonar e Instalar Dependencias
+### 1. Clonar el Repositorio
 
 ```bash
-git clone https://github.com/tu-usuario/PhishShield-Angular.git
-cd "PhishShield - Angular"
+git clone https://github.com/Wilcam1/Phishshield-Angular.git
+cd Phishshield-Angular
 npm install
 ```
 
@@ -56,56 +109,61 @@ Parámetros principales en `.env`:
 | `PORT` | Puerto de escucha de la API Express | `3000` |
 | `NODE_ENV` | Entorno de ejecución (`development` / `production`) | `production` |
 | `ALLOWED_ORIGINS` | Orígenes CORS permitidos separados por comas | `http://localhost:4200,http://localhost:3000` |
-| `ADMIN_USERNAME` | Usuario administrador para panel SOC | `admin` |
+| `ML_SERVICE_URL` | URL del microservicio de Machine Learning en Python | `http://localhost:8000` |
+| `ADMIN_USERNAME` | Usuario administrador para el panel SOC | `admin` |
 | `ADMIN_PASSWORD` | Contraseña maestra del administrador | *(Definir en despliegue)* |
-| `VIRUSTOTAL_API_KEY` | Clave API de VirusTotal (Opcional) | - |
-| `GOOGLE_SAFE_BROWSING_API_KEY` | Clave API de Google Safe Browsing (Opcional) | - |
-| `GEMINI_API_KEY` | Clave API de Google Gemini (Opcional) | - |
+| `VIRUSTOTAL_API_KEY` | Clave API de VirusTotal *(Opcional)* | - |
+| `GOOGLE_SAFE_BROWSING_API_KEY` | Clave API de Google Safe Browsing *(Opcional)* | - |
+| `GEMINI_API_KEY` | Clave API de Google Gemini para explicaciones IA *(Opcional)* | - |
 
 ---
 
 ## 💻 Ejecución del Proyecto
 
-### Modo Desarrollo (Frontend + Backend concurrentes)
+### Opción A: Modo Fullstack Completo (Frontend + Backend + ML)
 ```bash
 npm start
 ```
-- **Frontend Angular**: `http://localhost:4200`
-- **Backend API**: `http://localhost:3000`
+*Inicia concurrentemente el microservicio ML en Python (`:8000`), el backend Express (`:3000`) y el frontend Angular (`:4200`).*
 
-### Solo Servidor Backend
+### Opción B: Modo Ligero sin Python (Recomendado para desarrollo ágil)
 ```bash
+npm run start:no-ml
+```
+*Inicia el API Gateway y el cliente Angular. El backend conmuta automáticamente a modo de fallback resiliente sin interrumpir ningún análisis heurístico ni de VirusTotal.*
+
+### Comandos Individuales
+```bash
+# Solo microservicio Machine Learning
+npm run ml
+
+# Solo servidor Backend Node.js
 npm run server
-```
 
-### Solo Cliente Angular
-```bash
+# Solo cliente Frontend Angular
 npm run client
-```
 
-### Compilación para Producción (Build)
-```bash
+# Compilación para Producción (Build)
 npm run build
 ```
-*(Los artefactos optimizados se generan en `dist/phishshield-angular` y son servidos automáticamente por el backend en producción).*
 
 ---
 
 ## 🧪 Pruebas Automatizadas y Calidad
 
-El proyecto cuenta con una suite integral de pruebas unitarias, de integración y de seguridad:
+El proyecto cuenta con suites de pruebas unitarias, de integración, de seguridad y verificación estricta de capas por linter:
 
 ```bash
 # Ejecutar todas las pruebas (Frontend + Backend)
 npm run test:all
 
-# Ejecutar pruebas del backend (Vitest)
+# Pruebas del Backend (Vitest - 37 pruebas pasando)
 npm run test:server
 
-# Ejecutar pruebas del frontend (Vitest / Angular)
+# Pruebas del Frontend Angular (Signals, Tuberías, Validadores, Mapeadores)
 npm test
 
-# Verificación de linting estático
+# Verificación de reglas arquitectónicas de capas y estilos (ESLint)
 npm run lint
 ```
 
@@ -113,41 +171,34 @@ npm run lint
 
 ## 🐳 Despliegue en Producción con Docker
 
-### Opción 1: Docker Compose (Recomendado)
+### Docker Compose (Multi-Contenedor)
+
+Levanta la arquitectura completa aislada en red interna con persistencia de volúmenes:
 
 ```bash
 docker-compose up -d --build
 ```
 
-El servicio estará disponible en `http://localhost:3000` con:
-- Healthcheck activo cada 30 segundos.
-- Usuario no root `node` para máxima seguridad.
-- Soporte para Chromium sin permisos privilegiados (`--no-sandbox`).
-- Reinicio automático ante fallos (`unless-stopped`).
-
-### Opción 2: Docker CLI Directo
-
-```bash
-docker build -t phishshield:latest .
-docker run -d -p 3000:3000 --name phishshield-app --restart unless-stopped phishshield:latest
-```
+Servicios incluidos:
+1. **`phishshield`**: Frontend compilado + Servidor Express + Chromium headless sandboxed en el puerto `3000`.
+2. **`phishshield-ml`**: Microservicio Python con modelo scikit-learn preentrenado en el puerto `8000`.
+3. **Volumen `phishshield-data`**: Mapeado sobre `/app/server/data` para garantizar la persistencia de reportes, historial, sesiones y configuraciones ante reinicios.
 
 ---
 
-## 🔒 Medidas de Seguridad Implementadas (OWASP)
+## 🔒 Características de Seguridad y Rendimiento
 
-1. **Defensa contra SSRF (Server-Side Request Forgery)**: Filtro estricto que bloquea peticiones a `127.0.0.1`, `localhost`, rangos privados RFC 1918 (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) y metadatos de proveedores cloud (`169.254.169.254`).
-2. **Autenticación Criptográfica Robusta**:
-   - Algoritmo de derivación de claves **Scrypt** con sal de 16 bytes.
-   - Tokens de sesión generados mediante CSPRNG (`crypto.randomBytes(32)`).
-   - Expiración automática de tokens mediante TTL (2 horas).
-   - Comparación de contraseñas resistente a timing attacks (`crypto.timingSafeEqual`).
-3. **Control de Flujo y Mitigación DoS**:
-   - Límite global: 300 peticiones / 15 min por IP.
-   - Límite en análisis y captura: 60 peticiones / 5 min.
-   - Límite de inicio de sesión: 8 intentos fallidos / 15 min.
-4. **Cabeceras HTTP Seguras**: `Helmet` con `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, y CORS restrictivo configurable.
-5. **Apagado Limpio (Graceful Shutdown)**: Manejo nativo de `SIGTERM` y `SIGINT` cerrando conexiones HTTP activas sin pérdida de datos.
+1. **Defensa contra SSRF (Server-Side Request Forgery)**: Filtro estricto que bloquea solicitudes a `127.0.0.1`, `localhost`, redes privadas RFC 1918 (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) y metadatos cloud (`169.254.169.254`).
+2. **Captura Visual Headless con Hidratación SPA**: Puppeteer optimizado con compresión JPEG al 75% y un retardo de **3 segundos** tras `domcontentloaded`, asegurando que portales bancarios y SPAs (Angular, React, Vue) monten su contenido visual antes de capturar, evitando pantallas con logos de carga (*spinners*).
+3. **Autenticación Criptográfica Robusta**:
+   * Derivación de claves con **Scrypt** y sal criptográfica de 16 bytes.
+   * Tokens CSPRNG de 256 bits (`crypto.randomBytes(32)`) con expiración por TTL (2 horas).
+   * Comparación en tiempo constante (`crypto.timingSafeEqual`) contra ataques de canal lateral (*timing attacks*).
+4. **Protección DoS / Rate Limiting**:
+   * Límite global: 300 peticiones / 15 min por IP.
+   * Análisis y capturas: 60 peticiones / 5 min.
+   * Autenticación: 8 intentos fallidos / 15 min.
+5. **Apagado Limpio (Graceful Shutdown)**: Manejo de señales `SIGTERM` y `SIGINT` en `server/index.js` liberando puertos y guardando estado en disco de forma segura.
 
 ---
 
@@ -156,11 +207,17 @@ docker run -d -p 3000:3000 --name phishshield-app --restart unless-stopped phish
 | Método | Ruta | Acceso | Descripción |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/health` | Público | Verificación de estado del servidor y uptime |
-| `POST` | `/analizar` | Público (Limitado) | Ejecuta el análisis forense multicapa de una URL |
-| `POST` | `/reportar` | Público (Limitado) | Registra una URL como phishing en la lista comunitaria |
-| `GET` | `/estadisticas` | Público | Métricas agregadas de detección y volumen |
-| `GET` | `/historial` | Público | Lista histórica de análisis recientes |
-| `GET` | `/api/screenshot` | Público (Limitado) | Captura visual en tiempo real de la página |
-| `POST` | `/api/login` | Público (Limitado) | Autenticación de administradores |
-| `GET` | `/api/admin/export/reportes` | Privado (Token) | Exportación en formato CSV de reportes |
-| `POST` | `/api/admin/cambiar-password`| Privado (Token) | Actualización de contraseña administrativa |
+| `POST` | `/analizar` | Público (Rate-limit) | Análisis forense multicapa de una URL |
+| `POST` | `/reportar` | Público (Rate-limit) | Registra una URL como phishing en la lista comunitaria |
+| `GET` | `/estadisticas` | Público | Métricas agregadas de detección y volumen forense |
+| `GET` | `/historial` | Público | Historial de análisis recientes ejecutados |
+| `GET` | `/api/screenshot` | Público (Rate-limit) | Captura visual en tiempo real con 3s de renderizado |
+| `POST` | `/api/login` | Público (Rate-limit) | Autenticación administrativa con emisión de token |
+| `GET` | `/api/admin/export/reportes` | Privado (Bearer) | Exportación en CSV de reportes comunitarios |
+| `POST` | `/api/admin/cambiar-password`| Privado (Bearer) | Actualización de contraseña administrativa cifrada |
+
+---
+
+## 📄 Licencia
+
+Este proyecto es de código abierto bajo la licencia MIT.
