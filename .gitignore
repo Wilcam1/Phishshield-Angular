@@ -43,8 +43,13 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 .env
+
+# Server runtime storage & secrets
 cache.json
-server/data/
+server/data/auth.json
+server/data/cache.json
+server/data/history.json
+
 server/ml_service/venv/
 server/ml_service/**/__pycache__/
 *.pyc

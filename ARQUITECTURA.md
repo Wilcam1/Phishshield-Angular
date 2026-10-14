@@ -130,3 +130,33 @@ Para incorporar un nuevo caso de uso (por ejemplo, *Lista Blanca de Dominios Cor
 1. Crear componentes delgados en `presentacion/componentes/tarjeta-lista-blanca/`.
 2. Enlazar los inputs y outputs hacia las señales y métodos del servicio en la página correspondiente.
 3. Aplicar los tokens de `presentacion/diseno/tokens.scss` para garantizar coherencia visual.
+
+---
+
+## 6. Arquitectura del Backend, Persistencia y Microservicio ML
+
+### 6.1 Estructura del Servidor Express (`server/`)
+El backend está desacoplado del frontend y organizado en módulos con inyección de dependencias:
+- **Punto de Entrada (`server/index.js`):** Inicia la instancia de `PhishShieldServer` y maneja señales de apagado limpio (*Graceful Shutdown*).
+- **Orquestador Principal (`server/app.js`):** Centraliza middlewares (Helmet, CORS, compresión Gzip, rate limiters) y monta los controladores.
+- **Analizadores (`server/analyzers/`):** Motores de inspección DOM (Puppeteer), SSL, cálculo de riesgo forense, detección de typosquatting y heurísticas.
+- **Seguridad (`server/security/`):** Hashing Scrypt con CSPRNG para contraseñas, validación anti-SSRF y autenticación por tokens con TTL.
+- **Servicios Externos (`server/services/`):** Conectores hacia VirusTotal, Google Safe Browsing, PhishTank y explicaciones con Google Gemini AI.
+
+### 6.2 Persistencia Unificada (`server/data/`)
+Todos los archivos de datos residen exclusivamente en `server/data/` para aislar el estado dinámico del código fuente y asegurar la persistencia en contenedores:
+
+| Archivo | Propósito | Gestión en Git |
+| :--- | :--- | :--- |
+| `blacklist.json` | Lista negra de firmas y dominios sospechosos conocidos. | Versionado (semilla) |
+| `reports.json` | Dominio base reportados por la comunidad. | Versionado (semilla) |
+| `history.json` | Registro de análisis forenses ejecutados. | Ignorado (`.gitignore`) |
+| `cache.json` | Caché en caliente con expiración por TTL. | Ignorado (`.gitignore`) |
+| `auth.json` | Credenciales cifradas de administración. | Ignorado (`.gitignore`) |
+
+> [!IMPORTANT]
+> En entornos Docker, el volumen persistente `phishshield-data` se monta directamente sobre `/app/server/data`, garantizando que ninguna información se pierda entre despliegues o reinicios.
+
+### 6.3 Microservicio de Machine Learning (`server/ml_service/`)
+Microservicio independiente en Python (Scikit-Learn) que evalúa probabilidades de phishing mediante un vector de características léxicas y estructurales de URL. En caso de indisponibilidad del servicio en el puerto `8000`, el backend Node.js conmuta automáticamente a modo resiliente (*graceful fallback*) sin interrumpir la operación del sistema.
+

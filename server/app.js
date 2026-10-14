@@ -514,16 +514,16 @@ class PhishShieldServer {
         }
       });
 
-      // 3. Cargar hasta DOMContentLoaded con timeout de 5 segundos (no esperar networkidle2 de 15s)
+      // 3. Cargar hasta DOMContentLoaded con timeout de 8 segundos
       try {
-        await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 5000 });
+        await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 8000 });
       } catch (navError) {
         // Si hay timeout leve pero cargó parte del DOM, continuamos la captura
         console.warn(`⚠️ Advertencia de navegación suave: ${navError.message}`);
       }
 
-      // 4. Pequeña pausa de 200ms para renderizado inicial del layout
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // 4. Pausa de 3 segundos para permitir el renderizado completo de SPAs, scripts dinámicos y desaparición de spinners
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       // 5. Captura JPEG optimizada (calidad 75 reduce el tamaño de 3MB a ~60KB)
       const screenshotBuffer = await page.screenshot({

@@ -40,9 +40,6 @@ RUN npm ci --omit=dev
 
 # Copiar servidor, módulos y archivos de configuración
 COPY server ./server
-COPY server.js ./
-COPY history.json ./
-COPY reports.json ./
 COPY .env.example ./.env.example
 
 # Copiar artefactos compilados del frontend Angular
@@ -60,4 +57,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:3000/health || exit 1
 
 # Inicio del servidor
-CMD ["node", "server.js"]
+CMD ["node", "server/index.js"]

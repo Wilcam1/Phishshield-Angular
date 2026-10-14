@@ -7,7 +7,9 @@ const __dirname = path.dirname(__filename);
 
 class HistoryRepository {
     constructor(maxEntries = 5000, customFilePath = null) {
-        this.historyFile = customFilePath || process.env.HISTORY_FILE || path.join(__dirname, '../../history.json');
+        const defaultDataPath = path.join(__dirname, '../data/history.json');
+        const legacyPath = path.join(__dirname, '../../history.json');
+        this.historyFile = customFilePath || process.env.HISTORY_FILE || (fs.existsSync(defaultDataPath) ? defaultDataPath : (fs.existsSync(legacyPath) ? legacyPath : defaultDataPath));
         this.maxEntries = parseInt(process.env.MAX_HISTORY_ENTRIES || maxEntries, 10);
         this.historialAnalisis = this._loadHistory();
     }
@@ -25,6 +27,10 @@ class HistoryRepository {
 
     async _saveHistory() {
         try {
+            const dir = path.dirname(this.historyFile);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
             await fs.promises.writeFile(this.historyFile, JSON.stringify(this.historialAnalisis, null, 2), 'utf8');
         } catch (error) {
             console.error('❌ Error guardando historial de forma asíncrona:', error.message);

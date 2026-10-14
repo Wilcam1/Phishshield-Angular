@@ -92,7 +92,9 @@ class TyposquattingDetector {
 
   _cargarBlacklist() {
     try {
-      const blacklistPath = path.join(__dirname, '../../blacklist.json');
+      const defaultDataPath = path.join(__dirname, '../data/blacklist.json');
+      const legacyPath = path.join(__dirname, '../../blacklist.json');
+      const blacklistPath = process.env.BLACKLIST_FILE || (fs.existsSync(defaultDataPath) ? defaultDataPath : (fs.existsSync(legacyPath) ? legacyPath : defaultDataPath));
       const contenido = fs.readFileSync(blacklistPath, 'utf-8');
       const datos = JSON.parse(contenido);
       const dominios = datos.dominios_sospechosos || [];

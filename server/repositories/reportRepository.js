@@ -7,7 +7,9 @@ const __dirname = path.dirname(__filename);
 
 class ReportRepository {
   constructor(customFilePath = null) {
-    this.reportFile = customFilePath || process.env.REPORTS_FILE || path.join(__dirname, '../../reports.json');
+    const defaultDataPath = path.join(__dirname, '../data/reports.json');
+    const legacyPath = path.join(__dirname, '../../reports.json');
+    this.reportFile = customFilePath || process.env.REPORTS_FILE || (fs.existsSync(defaultDataPath) ? defaultDataPath : (fs.existsSync(legacyPath) ? legacyPath : defaultDataPath));
     this.reportesPhishing = this._loadReports();
   }
 
@@ -25,6 +27,10 @@ class ReportRepository {
 
   async _saveReports() {
     try {
+      const dir = path.dirname(this.reportFile);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
       await fs.promises.writeFile(this.reportFile, JSON.stringify([...this.reportesPhishing], null, 2), 'utf8');
     } catch (error) {
       console.error('❌ Error guardando reportes de forma asíncrona:', error.message);
